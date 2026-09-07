@@ -73,7 +73,6 @@ set(DATA_DST ${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data)
 
 # ====== 雙軌編譯邏輯 ======
 if(EMSCRIPTEN)
-    if(EMSCRIPTEN)
     # WASM 模式：編譯橋接層
     add_executable(glados_tts ${CORE_SOURCES} wasm_bridge.c)
     
