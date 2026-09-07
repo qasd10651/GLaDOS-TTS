@@ -62,8 +62,8 @@ ExternalProject_Add(espeak_ng_external
 set(CORE_SOURCES
     snt_front_f32.c
     snt_piperlite.c
-    snt_voice_wasm.c
-    snt_g2p_wasm.c
+    snt_voic.c
+    snt_g2p.c
 )
 
 # ====== 處理資料複製與英文瘦身 ======
