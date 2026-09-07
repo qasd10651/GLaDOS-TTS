@@ -24,8 +24,8 @@ if(EMSCRIPTEN)
         -DCMAKE_CXX_COMPILER=em++
         -DCMAKE_AR=emar
         -DCMAKE_RANLIB=emranlib
-        "-DCMAKE_C_FLAGS=-D_FILE_OFFSET_BITS=64 -DHAVE_WCHAR_H -DHAVE_WCTYPE_H -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include -O3 -msimd128"
-        "-DCMAKE_CXX_FLAGS=-D_FILE_OFFSET_BITS=64 -DHAVE_WCHAR_H -DHAVE_WCTYPE_H -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include -O3 -msimd128"
+        "-DCMAKE_C_FLAGS=-D_FILE_OFFSET_BITS=64 -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include -O3 -msimd128"
+        "-DCMAKE_CXX_FLAGS=-D_FILE_OFFSET_BITS=64 -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include -O3 -msimd128"
     )
 else()
     list(APPEND EXTRA_EXTERNAL_CMAKE_ARGS
