@@ -67,6 +67,10 @@ set(CORE_SOURCES
 )
 
 # ====== 處理資料複製與英文瘦身 ======
+
+set(DATA_SRC "${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data")
+set(DATA_DST "${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data")
+
 set(CLEANUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/cleanup_dicts.py")
 file(WRITE ${CLEANUP_SCRIPT} "
 import sys, os, glob
