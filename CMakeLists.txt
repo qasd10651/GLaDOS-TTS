@@ -67,18 +67,18 @@ set(CORE_SOURCES
 )
 
 # ====== 處理資料複製與英文瘦身 ======
-set(DATA_SRC ${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data)
-set(DATA_DST ${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data)
+# set(DATA_SRC ${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data)
+# set(DATA_DST ${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data)
 
 # 自動複製字典，並在複製後刪除 voices 目錄下除了 en 之外的所有語言，達成極致瘦身
-add_custom_target(prepare_espeak_data ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
-    # 建立一個臨時的 python 腳本來安全刪除不必要的語言檔案
-    COMMAND ${CMAKE_COMMAND} -E echo "import os, shutil, glob; [shutil.rmtree(f) if os.path.isdir(f) else os.remove(f) for f in glob.glob('${DATA_DST}/voices/*') if not os.path.basename(f).startswith('en') and not os.path.basename(f) == '!v']" > cleanup_voices.py
-    COMMAND python cleanup_voices.py
-    DEPENDS espeak_ng_external
-    COMMENT "正在準備並精簡 espeak-ng-data (僅保留英文)..."
-)
+# add_custom_target(prepare_espeak_data ALL
+#     COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
+#     # 建立一個臨時的 python 腳本來安全刪除不必要的語言檔案
+#     COMMAND ${CMAKE_COMMAND} -E echo "import os, shutil, glob; [shutil.rmtree(f) if os.path.isdir(f) else os.remove(f) for f in glob.glob('${DATA_DST}/voices/*') if not os.path.basename(f).startswith('en') and not os.path.basename(f) == '!v']" > cleanup_voices.py
+#     COMMAND python cleanup_voices.py
+#     DEPENDS espeak_ng_external
+#     COMMENT "正在準備並精簡 espeak-ng-data (僅保留英文)..."
+# )
 
 
 # ====== 雙軌編譯邏輯 ======
