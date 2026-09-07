@@ -91,12 +91,10 @@ if(EMSCRIPTEN)
     # Emscripten 專屬連結參數：
     # 1. 開放記憶體增長，預設給予足夠的 INITIAL_MEMORY
     # 2. 允許匯出保留函式 (EMSCRIPTEN_KEEPALIVE)
-    # 3. 預載 espeak-ng-data 目錄到 WASM 的虛擬檔案系統
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
         -s INITIAL_MEMORY=33554432 \
         -s ALLOW_MEMORY_GROWTH=1 \
         -s EXPORTED_RUNTIME_METHODS=ccall,cwrap,getValue,setValue,UTF8ToString,stringToUTF8,lengthBytesUTF8 \
-        --preload-file ${DATA_DST}@/espeak-ng-data \
         -s EXPORT_ES6=1 \
         -s MODULARIZE=1 \
         -s EXPORT_NAME='GladosTTSModule'")
