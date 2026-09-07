@@ -74,14 +74,14 @@ if(WIN32)
 endif()
 
 # 自動複製 espeak-ng-data 到執行檔旁邊
-set(DATA_SRC ${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data)
-set(DATA_DST ${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data)
+# set(DATA_SRC ${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data)
+# set(DATA_DST ${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data)
 
-add_custom_target(copy_espeak_ng_data ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
-    DEPENDS espeak_ng_external glados_tts
-    COMMENT "正在複製 espeak-ng-data..."
-)
+# add_custom_target(copy_espeak_ng_data ALL
+#     COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
+#     DEPENDS espeak_ng_external glados_tts
+#     COMMENT "正在複製 espeak-ng-data..."
+# )
 
 # 判斷是否為 Emscripten 編譯環境
 if(EMSCRIPTEN)
