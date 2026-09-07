@@ -70,30 +70,54 @@ set(CORE_SOURCES
 set(DATA_SRC ${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data)
 set(DATA_DST ${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data)
 
-# 自動複製字典，並在複製後刪除 voices 目錄下除了 en 之外的所有語言，達成極致瘦身
-# add_custom_target(prepare_espeak_data ALL
-#     COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
-#     # 建立一個臨時的 python 腳本來安全刪除不必要的語言檔案
-#     COMMAND ${CMAKE_COMMAND} -E echo "import os, shutil, glob; [shutil.rmtree(f) if os.path.isdir(f) else os.remove(f) for f in glob.glob('${DATA_DST}/voices/*') if not os.path.basename(f).startswith('en') and not os.path.basename(f) == '!v']" > cleanup_voices.py
-#     COMMAND python cleanup_voices.py
-#     DEPENDS espeak_ng_external
-#     COMMENT "正在準備並精簡 espeak-ng-data (僅保留英文)..."
-# )
-
 
 # ====== 雙軌編譯邏輯 ======
 if(EMSCRIPTEN)
+    if(EMSCRIPTEN)
     # WASM 模式：編譯橋接層
     add_executable(glados_tts ${CORE_SOURCES} wasm_bridge.c)
     
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -msimd128 -ffast-math")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -msimd128 -ffast-math")
     
-    # 加上 --preload-file 將瘦身後的字典打包成 .data
+    # 1. 優雅生成 Python 瘦身腳本 (採用明確的檔案白名單)
+    set(CLEANUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/cleanup_voices.py")
+    file(WRITE ${CLEANUP_SCRIPT} "
+import sys, os, shutil, glob
+
+# 接收 CMake 傳進來的路徑
+voices_dir = os.path.join(sys.argv[1], 'voices')
+
+# ==========================================
+# 🎯 白名單：請在這裡精準填寫您「要保留」的檔案/資料夾名稱
+# '!v' 是聲音變體資料夾(必留)，'en', 'en-us' 是英文語音設定檔
+keep_list = ['!v', 'en', 'intonations', 'phondata-manifest', 'phondata', 'phonindex', 'phontab']
+# ==========================================
+
+if os.path.exists(voices_dir):
+    for path in glob.glob(os.path.join(voices_dir, '*')):
+        name = os.path.basename(path)
+        if name not in keep_list:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
+    ")
+
+    # 2. 確保在連結打包前執行複製與瘦身
+    add_custom_command(TARGET glados_tts PRE_LINK
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
+        # 執行剛生成的 python 腳本，並安全地傳遞路徑參數
+        COMMAND python3 ${CLEANUP_SCRIPT} ${DATA_DST}
+        COMMENT "正在準備並根據白名單精簡 espeak-ng-data..."
+    )
+
+    # 3. 加上 --preload-file 將瘦身後的字典打包成 .data，並匯出給 JS 的 API
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
         -s INITIAL_MEMORY=33554432 \
         -s ALLOW_MEMORY_GROWTH=1 \
         -s EXPORTED_RUNTIME_METHODS=ccall,cwrap,getValue,setValue,UTF8ToString,stringToUTF8,lengthBytesUTF8 \
+        -s EXPORTED_FUNCTIONS=\"['_snt_g2p_init', '_api_get_next_sentence_ids', '_api_synthesize_chunk', '_malloc', '_free']\" \
         --preload-file ${DATA_DST}@/espeak-ng-data \
         -s EXPORT_ES6=1 \
         -s MODULARIZE=1 \
