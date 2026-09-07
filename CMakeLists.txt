@@ -69,36 +69,57 @@ set(CORE_SOURCES
 
 # ====== 處理資料複製與英文瘦身 ======
 
+# ====== 處理資料複製與英文瘦身 ======
 set(DATA_SRC "${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data")
 set(DATA_DST "${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data")
 
 set(CLEANUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/prepare_data.py")
 file(WRITE ${CLEANUP_SCRIPT} "
-import sys, os, glob, shutil
+import sys, os, glob, shutil, subprocess
 
 src_dir = sys.argv[1]
 dst_dir = sys.argv[2]
 build_dir = sys.argv[3]
 
-# 若安裝目錄不存在，嘗試備用路徑 (Build 目錄)
-if not os.path.exists(src_dir):
-    print(f'[警告] 安裝目錄不存在: {src_dir}')
-    fallback_src = os.path.join(build_dir, 'src', 'espeak_ng_external-build', 'espeak-ng-data')
-    if os.path.exists(fallback_src):
-        print(f'[備援] 改從建置目錄複製: {fallback_src}')
-        src_dir = fallback_src
-    else:
-        print('[錯誤] 找不到任何 espeak-ng-data 目錄！')
-        print('目前 Install 目錄內容:', os.listdir(os.path.dirname(src_dir)) if os.path.exists(os.path.dirname(src_dir)) else 'Parent dir missing')
-        sys.exit(1)
+# 尋找 espeak-ng-data
+found_src = None
+if os.path.exists(src_dir):
+    found_src = src_dir
+else:
+    # 嘗試在系統中找 espeak-ng 安裝的預設字典
+    system_paths = [
+        '/usr/share/espeak-ng-data',
+        '/usr/local/share/espeak-ng-data',
+        '/opt/homebrew/share/espeak-ng-data'
+    ]
+    for p in system_paths:
+        if os.path.exists(p):
+            found_src = p
+            print(f'[資訊] 使用系統原生的 espeak-ng-data: {p}')
+            break
+
+if not found_src:
+    print('[警告] WASM 交叉編譯無法生成數據，嘗試安裝系統原生 espeak-ng 數據庫...')
+    # 如果是 Linux (GitHub Actions Runner)，嘗試透過 apt 快速補上數據
+    try:
+        subprocess.run(['sudo', 'apt-get', 'update', '-qq'], check=True)
+        subprocess.run(['sudo', 'apt-get', 'install', '-y', '-qq', 'espeak-ng-data'], check=True)
+        if os.path.exists('/usr/share/espeak-ng-data'):
+            found_src = '/usr/share/espeak-ng-data'
+    except Exception as e:
+        print(f'[錯誤] 自動安裝失敗: {e}')
+
+if not found_src:
+    print('[嚴重錯誤] 找不到可用的 espeak-ng-data！')
+    sys.exit(1)
 
 if os.path.exists(dst_dir):
     shutil.rmtree(dst_dir)
 
-print(f'正在複製 {src_dir} -> {dst_dir}')
-shutil.copytree(src_dir, dst_dir)
+print(f'正在複製 {found_src} -> {dst_dir}')
+shutil.copytree(found_src, dst_dir)
 
-# 清理非英文字典
+# 刪除非 en_dict 字典檔
 for path in glob.glob(os.path.join(dst_dir, '*_dict')):
     name = os.path.basename(path)
     if name != 'en_dict':
