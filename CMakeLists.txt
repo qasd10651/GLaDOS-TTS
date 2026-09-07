@@ -55,7 +55,6 @@ ExternalProject_Add(espeak_ng_external
     BUILD_BYPRODUCTS
         ${ESPEAKNG_STATIC_LIB}
         ${UCD_STATIC_LIB}
-        ${ESPEAKNG_INSTALL_DIR}/share/espeak-ng-data
     UPDATE_DISCONNECTED TRUE
 )
 
@@ -70,69 +69,7 @@ set(CORE_SOURCES
 # ====== 處理資料複製與英文瘦身 ======
 
 # ====== 處理資料複製與英文瘦身 ======
-set(DATA_SRC "${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data")
-set(DATA_DST "${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data")
-
-set(CLEANUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/prepare_data.py")
-file(WRITE ${CLEANUP_SCRIPT} "
-import sys, os, glob, shutil, subprocess
-
-src_dir = sys.argv[1]
-dst_dir = sys.argv[2]
-build_dir = sys.argv[3]
-
-# 尋找 espeak-ng-data
-found_src = None
-if os.path.exists(src_dir):
-    found_src = src_dir
-else:
-    # 嘗試在系統中找 espeak-ng 安裝的預設字典
-    system_paths = [
-        '/usr/share/espeak-ng-data',
-        '/usr/local/share/espeak-ng-data',
-        '/opt/homebrew/share/espeak-ng-data'
-    ]
-    for p in system_paths:
-        if os.path.exists(p):
-            found_src = p
-            print(f'[資訊] 使用系統原生的 espeak-ng-data: {p}')
-            break
-
-if not found_src:
-    print('[警告] WASM 交叉編譯無法生成數據，嘗試安裝系統原生 espeak-ng 數據庫...')
-    # 如果是 Linux (GitHub Actions Runner)，嘗試透過 apt 快速補上數據
-    try:
-        subprocess.run(['sudo', 'apt-get', 'update', '-qq'], check=True)
-        subprocess.run(['sudo', 'apt-get', 'install', '-y', '-qq', 'espeak-ng-data'], check=True)
-        if os.path.exists('/usr/share/espeak-ng-data'):
-            found_src = '/usr/share/espeak-ng-data'
-    except Exception as e:
-        print(f'[錯誤] 自動安裝失敗: {e}')
-
-if not found_src:
-    print('[嚴重錯誤] 找不到可用的 espeak-ng-data！')
-    sys.exit(1)
-
-if os.path.exists(dst_dir):
-    shutil.rmtree(dst_dir)
-
-print(f'正在複製 {found_src} -> {dst_dir}')
-shutil.copytree(found_src, dst_dir)
-
-# 刪除非 en_dict 字典檔
-for path in glob.glob(os.path.join(dst_dir, '*_dict')):
-    name = os.path.basename(path)
-    if name != 'en_dict':
-        os.remove(path)
-        print(f'已刪除不需要的字典: {name}')
-")
-
-add_custom_target(prepare_espeak_data
-    COMMAND python3 ${CLEANUP_SCRIPT} "${DATA_SRC}" "${DATA_DST}" "${ESPEAKNG_BUILD_DIR}"
-    COMMENT "正在複製並清理 espeak-ng 字典檔..."
-)
-
-add_dependencies(prepare_espeak_data espeak_ng_external)
+set(DATA_DST "${CMAKE_CURRENT_SOURCE_DIR}/espeak-ng-data")
 
 # ====== 雙軌編譯邏輯 ======
 if(EMSCRIPTEN)
@@ -162,7 +99,7 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -ffast-math")
 endif()
 
-add_dependencies(glados_tts prepare_espeak_data)
+add_dependencies(glados_tts espeak_ng_external)
 
 # ====== 連結設定 ======
 target_include_directories(glados_tts PRIVATE ${ESPEAKNG_INSTALL_DIR}/include)
