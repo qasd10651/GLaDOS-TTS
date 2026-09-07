@@ -107,7 +107,7 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -ffast-math")
 endif()
 
-# add_dependencies(glados_tts prepare_espeak_data)
+add_dependencies(glados_tts espeak_ng_external)
 
 # ====== 連結設定 ======
 target_include_directories(glados_tts PRIVATE ${ESPEAKNG_INSTALL_DIR}/include)
