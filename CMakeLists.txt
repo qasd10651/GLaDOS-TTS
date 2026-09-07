@@ -67,8 +67,8 @@ set(CORE_SOURCES
 )
 
 # ====== 處理資料複製與英文瘦身 ======
-# set(DATA_SRC ${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data)
-# set(DATA_DST ${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data)
+set(DATA_SRC ${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data)
+set(DATA_DST ${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data)
 
 # 自動複製字典，並在複製後刪除 voices 目錄下除了 en 之外的所有語言，達成極致瘦身
 # add_custom_target(prepare_espeak_data ALL
@@ -94,6 +94,7 @@ if(EMSCRIPTEN)
         -s INITIAL_MEMORY=33554432 \
         -s ALLOW_MEMORY_GROWTH=1 \
         -s EXPORTED_RUNTIME_METHODS=ccall,cwrap,getValue,setValue,UTF8ToString,stringToUTF8,lengthBytesUTF8 \
+        --preload-file ${DATA_DST}@/espeak-ng-data \
         -s EXPORT_ES6=1 \
         -s MODULARIZE=1 \
         -s EXPORT_NAME='GladosTTSModule'")
