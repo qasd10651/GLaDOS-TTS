@@ -66,8 +66,15 @@ set(CORE_SOURCES
     snt_g2p.c
 )
 
+include(FetchContent)
+FetchContent_Declare(
+    piper_phonemize_precompiled
+    URL https://github.com/rhasspy/piper-phonemize/releases/download/v1.2.0/piper-phonemize_linux_x86_64.tar.gz
+)
+FetchContent_MakeAvailable(piper_phonemize_precompiled)
+
 # ====== 處理資料複製與英文瘦身 ======
-set(DATA_SRC ${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data)
+set(DATA_SRC ${piper_phonemize_precompiled_SOURCE_DIR}/espeak-ng-data)
 set(DATA_DST ${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data)
 
 
@@ -79,36 +86,32 @@ if(EMSCRIPTEN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -msimd128 -ffast-math")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -msimd128 -ffast-math")
     
-    # 1. 優雅生成 Python 瘦身腳本 (採用明確的檔案白名單)
+    # 優雅生成 Python 瘦身腳本 (專門清理肥大的非英文字典)
     set(CLEANUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/cleanup_dicts.py")
     file(WRITE ${CLEANUP_SCRIPT} "
 import sys, os, glob
-
 data_dir = sys.argv[1]
-
-# 找出 espeak-ng-data 根目錄下所有的字典檔 (*_dict)
 for path in glob.glob(os.path.join(data_dir, '*_dict')):
     name = os.path.basename(path)
-    # 只要不是 en_dict (英文字典)，就通通刪除
     if name != 'en_dict':
         os.remove(path)
         print(f'已刪除不需要的字典: {name}')
     ")
 
-    # 2. 確保在連結打包前執行複製與瘦身
+    # 確保在連結打包前執行複製與瘦身
     add_custom_command(TARGET glados_tts PRE_LINK
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
-        # 執行剛生成的 python 腳本，傳入 DATA_DST 路徑
         COMMAND python3 ${CLEANUP_SCRIPT} ${DATA_DST}
-        COMMENT "正在清理非英文的 espeak-ng 字典檔..."
+        COMMENT "正在準備並清理非英文的 espeak-ng 字典檔..."
     )
 
-    # 3. 加上 --preload-file 將瘦身後的字典打包成 .data，並匯出給 JS 的 API
+    # 加上 --preload-file 將瘦身後的字典打包成 .data
+    # 這裡的 EXPORTED_FUNCTIONS 必須與您 JavaScript 裡呼叫的名字一致！
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
         -s INITIAL_MEMORY=33554432 \
         -s ALLOW_MEMORY_GROWTH=1 \
         -s EXPORTED_RUNTIME_METHODS=ccall,cwrap,getValue,setValue,UTF8ToString,stringToUTF8,lengthBytesUTF8 \
-        -s EXPORTED_FUNCTIONS=\"['_snt_g2p_init', '_api_get_next_sentence_ids', '_api_synthesize_chunk', '_malloc', '_free']\" \
+        -s EXPORTED_FUNCTIONS=\"['_snt_g2p_init', '_snt_g2p_text_to_ids', '_snt_voice_synthesize', '_malloc', '_free', '_main']\" \
         --preload-file ${DATA_DST}@/espeak-ng-data \
         -s EXPORT_ES6=1 \
         -s MODULARIZE=1 \
@@ -123,6 +126,7 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -ffast-math")
 endif()
 
+# 確保先編譯 espeak-ng
 add_dependencies(glados_tts espeak_ng_external)
 
 # ====== 連結設定 ======
