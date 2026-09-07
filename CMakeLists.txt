@@ -62,7 +62,7 @@ ExternalProject_Add(espeak_ng_external
 set(CORE_SOURCES
     snt_front_f32.c
     snt_piperlite.c
-    snt_voic.c
+    snt_voice.c
     snt_g2p.c
 )
 
