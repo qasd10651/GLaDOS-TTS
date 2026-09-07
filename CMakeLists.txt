@@ -41,8 +41,13 @@ ExternalProject_Add(espeak_ng_external
     UPDATE_DISCONNECTED TRUE
 )
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -march=native -ffast-math")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -ffast-math")
+if(EMSCRIPTEN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -msimd128 -ffast-math")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -msimd128 -ffast-math")
+else()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -march=native -ffast-math")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -ffast-math")
+endif()
 
 # 定義我們的純 C 獨立執行檔
 add_executable(glados_tts
@@ -85,12 +90,6 @@ endif()
 
 # 判斷是否為 Emscripten 編譯環境
 if(EMSCRIPTEN)
-    # 開啟 WASM SIMD 128 加速與最佳化
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -msimd128 -ffast-math")
-    
-    # Emscripten 專屬連結參數：
-    # 1. 開放記憶體增長，預設給予足夠的 INITIAL_MEMORY
-    # 2. 允許匯出保留函式 (EMSCRIPTEN_KEEPALIVE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
         -s INITIAL_MEMORY=33554432 \
         -s ALLOW_MEMORY_GROWTH=1 \
@@ -99,6 +98,6 @@ if(EMSCRIPTEN)
         -s MODULARIZE=1 \
         -s EXPORT_NAME='GladosTTSModule'")
         
-    # 將輸出副檔名改為 JS (Emscripten 會同時生成 .wasm、.js 與 .data)
+    # 將輸出副檔名改為 JS (Emscripten 會同時生成 .wasm 與 .js)
     set_target_properties(glados_tts PROPERTIES SUFFIX ".js")
 endif()
