@@ -55,6 +55,7 @@ ExternalProject_Add(espeak_ng_external
     BUILD_BYPRODUCTS
         ${ESPEAKNG_STATIC_LIB}
         ${UCD_STATIC_LIB}
+        ${ESPEAKNG_INSTALL_DIR}/share/espeak-ng-data
     UPDATE_DISCONNECTED TRUE
 )
 
@@ -71,28 +72,43 @@ set(CORE_SOURCES
 set(DATA_SRC "${CMAKE_BINARY_DIR}/espeak_ng-install/share/espeak-ng-data")
 set(DATA_DST "${CMAKE_CURRENT_BINARY_DIR}/espeak-ng-data")
 
-set(CLEANUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/cleanup_dicts.py")
+set(CLEANUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/prepare_data.py")
 file(WRITE ${CLEANUP_SCRIPT} "
-import sys, os, glob
+import sys, os, glob, shutil
 
-data_dir = sys.argv[1]
-if not os.path.exists(data_dir):
-    print(f'Error: Data directory {data_dir} does not exist!')
-    sys.exit(1)
+src_dir = sys.argv[1]
+dst_dir = sys.argv[2]
+build_dir = sys.argv[3]
 
-for path in glob.glob(os.path.join(data_dir, '*_dict')):
+# 若安裝目錄不存在，嘗試備用路徑 (Build 目錄)
+if not os.path.exists(src_dir):
+    print(f'[警告] 安裝目錄不存在: {src_dir}')
+    fallback_src = os.path.join(build_dir, 'src', 'espeak_ng_external-build', 'espeak-ng-data')
+    if os.path.exists(fallback_src):
+        print(f'[備援] 改從建置目錄複製: {fallback_src}')
+        src_dir = fallback_src
+    else:
+        print('[錯誤] 找不到任何 espeak-ng-data 目錄！')
+        print('目前 Install 目錄內容:', os.listdir(os.path.dirname(src_dir)) if os.path.exists(os.path.dirname(src_dir)) else 'Parent dir missing')
+        sys.exit(1)
+
+if os.path.exists(dst_dir):
+    shutil.rmtree(dst_dir)
+
+print(f'正在複製 {src_dir} -> {dst_dir}')
+shutil.copytree(src_dir, dst_dir)
+
+# 清理非英文字典
+for path in glob.glob(os.path.join(dst_dir, '*_dict')):
     name = os.path.basename(path)
     if name != 'en_dict':
         os.remove(path)
         print(f'已刪除不需要的字典: {name}')
 ")
 
-# 2. 建立獨立的資料處理 Target
 add_custom_target(prepare_espeak_data
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${DATA_DST}
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
-    COMMAND python3 ${CLEANUP_SCRIPT} ${DATA_DST}
-    COMMENT "正在處理與清理 espeak-ng 字典檔..."
+    COMMAND python3 ${CLEANUP_SCRIPT} "${DATA_SRC}" "${DATA_DST}" "${ESPEAKNG_BUILD_DIR}"
+    COMMENT "正在複製並清理 espeak-ng 字典檔..."
 )
 
 add_dependencies(prepare_espeak_data espeak_ng_external)
