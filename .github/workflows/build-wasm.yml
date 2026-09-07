@@ -1,0 +1,33 @@
+name: Build WASM Engine
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Configure CMake for WebAssembly
+        run: emcmake cmake -B build-wasm -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build WASM
+        run: cmake --build build-wasm -j4
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: glados-wasm-build
+          path: |
+            build-wasm/glados_tts.js
+            build-wasm/glados_tts.wasm
+            build-wasm/glados_tts.data
