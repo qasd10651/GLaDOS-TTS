@@ -81,35 +81,27 @@ if(EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -msimd128 -ffast-math")
     
     # 1. 優雅生成 Python 瘦身腳本 (採用明確的檔案白名單)
-    set(CLEANUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/cleanup_voices.py")
+    set(CLEANUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/cleanup_dicts.py")
     file(WRITE ${CLEANUP_SCRIPT} "
-import sys, os, shutil, glob
+import sys, os, glob
 
-# 接收 CMake 傳進來的路徑
-voices_dir = os.path.join(sys.argv[1], 'voices')
+data_dir = sys.argv[1]
 
-# ==========================================
-# 🎯 白名單：請在這裡精準填寫您「要保留」的檔案/資料夾名稱
-# '!v' 是聲音變體資料夾(必留)，'en', 'en-us' 是英文語音設定檔
-keep_list = ['!v', 'en', 'intonations', 'phondata-manifest', 'phondata', 'phonindex', 'phontab']
-# ==========================================
-
-if os.path.exists(voices_dir):
-    for path in glob.glob(os.path.join(voices_dir, '*')):
-        name = os.path.basename(path)
-        if name not in keep_list:
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-            else:
-                os.remove(path)
+# 找出 espeak-ng-data 根目錄下所有的字典檔 (*_dict)
+for path in glob.glob(os.path.join(data_dir, '*_dict')):
+    name = os.path.basename(path)
+    # 只要不是 en_dict (英文字典)，就通通刪除
+    if name != 'en_dict':
+        os.remove(path)
+        print(f'已刪除不需要的字典: {name}')
     ")
 
     # 2. 確保在連結打包前執行複製與瘦身
     add_custom_command(TARGET glados_tts PRE_LINK
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
-        # 執行剛生成的 python 腳本，並安全地傳遞路徑參數
+        # 執行剛生成的 python 腳本，傳入 DATA_DST 路徑
         COMMAND python3 ${CLEANUP_SCRIPT} ${DATA_DST}
-        COMMENT "正在準備並根據白名單精簡 espeak-ng-data..."
+        COMMENT "正在清理非英文的 espeak-ng 字典檔..."
     )
 
     # 3. 加上 --preload-file 將瘦身後的字典打包成 .data，並匯出給 JS 的 API
