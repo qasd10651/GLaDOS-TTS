@@ -16,6 +16,24 @@ else()
     set(UCD_STATIC_LIB ${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external-build/src/ucd-tools/libucd.a)
 endif()
 
+set(EXTRA_EXTERNAL_CMAKE_ARGS "")
+if(EMSCRIPTEN)
+    list(APPEND EXTRA_EXTERNAL_CMAKE_ARGS
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+        -DCMAKE_C_COMPILER=emcc
+        -DCMAKE_CXX_COMPILER=em++
+        -DCMAKE_AR=emar
+        -DCMAKE_RANLIB=emranlib
+        "-DCMAKE_C_FLAGS=-D_FILE_OFFSET_BITS=64 -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include -O3 -msimd128"
+        "-DCMAKE_CXX_FLAGS=-D_FILE_OFFSET_BITS=64 -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include -O3 -msimd128"
+    )
+else()
+    list(APPEND EXTRA_EXTERNAL_CMAKE_ARGS
+        "-DCMAKE_C_FLAGS=-D_FILE_OFFSET_BITS=64 -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include"
+        "-DCMAKE_CXX_FLAGS=-D_FILE_OFFSET_BITS=64 -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include"
+    )
+endif()
+
 # 自動下載並編譯 espeak-ng (與官方 Piper 相同的穩定版本)
 ExternalProject_Add(espeak_ng_external
     GIT_REPOSITORY https://github.com/espeak-ng/espeak-ng.git
@@ -33,8 +51,7 @@ ExternalProject_Add(espeak_ng_external
         -DUSE_SPEECHPLAYER:BOOL=OFF
         -DEXTRA_cmn:BOOL=ON
         -DEXTRA_ru:BOOL=ON
-        "-DCMAKE_C_FLAGS=-D_FILE_OFFSET_BITS=64 -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include"
-        "-DCMAKE_CXX_FLAGS=-D_FILE_OFFSET_BITS=64 -I${ESPEAKNG_BUILD_DIR}/src/espeak_ng_external/src/ucd-tools/src/include"
+        ${EXTRA_EXTERNAL_CMAKE_ARGS}
     BUILD_BYPRODUCTS
         ${ESPEAKNG_STATIC_LIB}
         ${UCD_STATIC_LIB}
