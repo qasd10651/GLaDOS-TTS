@@ -20,8 +20,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "espeak-ng/espeak_ng.h"
-#include "espeak-ng/speak_lib.h"
+#include "espeak_ng.h"
+#include "speak_lib.h"
 
 #include "cp_id_tables_multi.h"
 
